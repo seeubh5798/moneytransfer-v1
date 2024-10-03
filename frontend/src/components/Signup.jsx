@@ -27,7 +27,7 @@ export const Signup = () => {
                 // console.log(res.status)
                 alert(res.data.message);
                 sessionStorage.setItem("token" , res.data.token);
-                navigate("/dashboard");
+                navigate("/dashboard", { state: { userId : res.data.userId , firstname : res.data.firstname, balance : res.data.balance} });
     
             }
             catch(err){

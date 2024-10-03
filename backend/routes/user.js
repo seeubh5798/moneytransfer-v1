@@ -6,6 +6,7 @@ console.log("after touer schema");
 const jwt = require('jsonwebtoken');
 const {JWT_SECRET} = require('../config');
 const authMiddleware  = require('../middleware/middleware');
+const { default: mongoose } = require('mongoose');
 const router = express.Router();
 
 console.log("from user touer schema");
@@ -38,7 +39,7 @@ router.post("/signup", async (req,res)=>{
     console.log("usr from signup check" ,user);
     if(user){
         console.log("user inside signup check")
-        res.json({
+        res.status(409).json({
             error : "user already exists"
         });
         return ;
@@ -48,14 +49,16 @@ router.post("/signup", async (req,res)=>{
     const dbres = await User.create(parsedBody.data);
     console.log("db created", dbres);
     const userId = dbres._id;
-    const accountRes = await Account.create({userId , balance : parseInt(Math.random()*10000)});
+    const accountRes = await Account.create({userId , balance : parseInt(Math.random()*100000)});
     if(dbres){
         
             const token = jwt.sign({userId} , JWT_SECRET);
             res.status(200).json({
                 "message" : "user created successfully",
                 token ,
-                balance : accountRes.balance
+                balance : accountRes.balance,
+                userId : dbres._id,
+                firstname : dbres.firstname
             })
         }
     }
@@ -78,13 +81,19 @@ router.post("/signin", async (req,res)=>{
     }
     try{
         const dbres = await User.findOne({username : parsedbody.data.username , password : parsedbody.data.password});
+        console.log("dbres" ,dbres);
+        const userId = dbres._id;
+        console.log(userId)
+        const accountRes = await Account.findOne({userId });
         console.log(dbres);
         if(dbres){
-                const token = jwt.sign({userId : dbres._id} , JWT_SECRET);
+                const token = jwt.sign({userId} , JWT_SECRET);
                 res.status(200).json({
                     "message" : "logged in successfully",
                     token ,
-                    userId : dbres._id
+                    userId : dbres._id,
+                    balance : accountRes.balance,
+                    firstname : dbres.firstname
                 })
             }
             else{
@@ -129,7 +138,7 @@ router.put("/updateuser", authMiddleware , async(req,res)=>{
 
 });
 
-router.get("/bulk", async (req,res)=>{
+router.get("/bulk", authMiddleware,async (req,res)=>{
     const filter = req.query.filter || "";
 
     try{
